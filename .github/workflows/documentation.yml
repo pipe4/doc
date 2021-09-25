@@ -1,0 +1,73 @@
+name: documentation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  checks:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+      - name: Test Build
+        run: |
+          yarn install --frozen-lockfile
+          yarn build
+  build:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+      - run: yarn install --frozen-lockfile
+      - run: yarn build
+
+      - name: version
+        id: version
+        run: |
+          VERSION3=$(node -p "require('./package.json').version")
+          VERSION2=$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')")
+          VERSION1=$(node -p "require('./package.json').version.split('.').slice(0,1).join('.')")
+          echo ::set-output name=VERSION3::${VERSION3}
+          echo ::set-output name=VERSION2::${VERSION2}
+          echo ::set-output name=VERSION1::${VERSION1}
+
+      - name: Log in to GitHub Docker Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+          - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      
+        - name: Build container image
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          context: ./
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
+          tags: |
+            ghcr.io/pipe4/doc:${{ steps.version.outputs.VERSION3 }}-${{ github.run_number }}
+            ghcr.io/pipe4/doc:${{ steps.version.outputs.VERSION3 }}
+            ghcr.io/pipe4/doc:${{ steps.version.outputs.VERSION2 }}
+            ghcr.io/pipe4/doc:${{ steps.version.outputs.VERSION1 }}
+            ghcr.io/pipe4/doc:latest
+      - # Temp fix
+        # https://github.com/docker/build-push-action/issues/252
+        # https://github.com/moby/buildkit/issues/1896
+        name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
