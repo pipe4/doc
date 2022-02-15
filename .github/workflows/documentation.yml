@@ -33,12 +33,10 @@ jobs:
       - name: version
         id: version
         run: |
-          BRANCH=$(git branch --show-current)
           VERSION3=$(node -p "require('./package.json').version")
           VERSION2=$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')")
           VERSION1=$(node -p "require('./package.json').version.split('.').slice(0,1).join('.')")
           
-          echo ::set-output name=BRANCH::${BRANCH}
           echo ::set-output name=VERSION3::${VERSION3}
           echo ::set-output name=VERSION2::${VERSION2}
           echo ::set-output name=VERSION1::${VERSION1}
@@ -61,8 +59,8 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
           tags: |
-            ghcr.io/pipe4/doc:${{ steps.version.outputs.BRANCH }}
-            ghcr.io/pipe4/doc:${{ steps.version.outputs.BRANCH }}-${{ steps.version.outputs.VERSION3 }}-${{ github.run_number }}
+            ghcr.io/pipe4/doc:${{ github.ref_name }}
+            ghcr.io/pipe4/doc:${{ github.ref_name }}-${{ steps.version.outputs.VERSION3 }}-${{ github.run_number }}
             ghcr.io/pipe4/doc:${{ steps.version.outputs.VERSION3 }}-${{ github.run_number }}
             ghcr.io/pipe4/doc:${{ steps.version.outputs.VERSION3 }}
             ghcr.io/pipe4/doc:${{ steps.version.outputs.VERSION2 }}
